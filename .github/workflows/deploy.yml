@@ -2,8 +2,11 @@ name: Deploy to EC2
 
 on:
   push:
+    # This ensures it triggers no matter what your branch is named
     branches:
       - main
+      - master
+  workflow_dispatch: # Allows you to run it manually with a button click
 
 jobs:
   deploy:
@@ -13,12 +16,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # We add an explicit check to stop early if GitHub cannot read the secrets
+      - name: Verify Secret Availability
+        run: |
+          if [ -z "${{ secrets.EC2_HOST }}" ]; then
+            echo "ERROR: GitHub cannot read your EC2_HOST secret!"
+            exit 1
+          fi
+          if [ -z "${{ secrets.EC2_USER }}" ]; then
+            echo "ERROR: GitHub cannot read your EC2_USER secret!"
+            exit 1
+          fi
+
       - name: Setup SSH Key
         run: |
           echo "${{ secrets.EC2_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
-      # Step 1: Test if GitHub can actually talk to your EC2 instance
       - name: Test SSH Connection
         run: |
           ssh -o StrictHostKeyChecking=no \
@@ -26,7 +40,6 @@ jobs:
           ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
           "hostname"
 
-      # Step 2: Correctly copy index.html using the secret variables
       - name: Deploy Application
         run: |
           scp -o StrictHostKeyChecking=no \
