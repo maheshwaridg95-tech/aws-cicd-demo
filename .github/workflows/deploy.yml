@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy to Amazon Linux EC2
 
 on:
   push:
@@ -16,21 +16,22 @@ jobs:
 
       - name: Deploy and Transfer
         env:
-          # This forces GitHub to bind secrets directly to local variables safely
           SSH_KEY: ${{ secrets.EC2_KEY }}
           SSH_USER: ${{ secrets.EC2_USER }}
           SSH_HOST: ${{ secrets.EC2_HOST }}
         run: |
-          # 1. Write the key to a file safely
+          # 1. Recreate the private key file locally on the runner
           echo "$SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
           
-          # 2. Check if variables are empty right here
+          # 2. Hard stop if your secrets are failing to load from GitHub Settings
           if [ -z "$SSH_USER" ] || [ -z "$SSH_HOST" ]; then
-            echo "CRITICAL ERROR: Repository secrets are empty or inaccessible."
+            echo "CRITICAL ERROR: GitHub Repository Secrets are empty or hidden!"
             exit 1
           fi
           
-          # 3. Execute SCP and SSH using the localized variables
-          scp -o StrictHostKeyChecking=no -i private_key.pem index.html ${SSH_USER}@${SSH_HOST}:/tmp/index.html
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${SSH_USER}@${SSH_HOST} "sudo mv /tmp/index.html /var/www/html/index.html"
+          # 3. Copy the file directly to your ec2-user home directory
+          scp -o StrictHostKeyChecking=no -i private_key.pem index.html ${SSH_USER}@${SSH_HOST}:/home/ec2-user/index.html
+          
+          # 4. SSH into the server to move the file into the web server directory
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${SSH_USER}@${SSH_HOST} "sudo mv /home/ec2-user/index.html /var/www/html/index.html"
