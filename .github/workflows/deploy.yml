@@ -17,6 +17,10 @@ jobs:
       run: |
         echo "${{ secrets.EC2_KEY }}" > private_key.pem
         chmod 600 private_key.pem
+         - name: Debug Secrets
+      run: |
+        echo "USER=${{ secrets.EC2_USER }}"
+        echo "HOST=${{ secrets.EC2_HOST }}"
 
     - name: Deploy
       run: |
