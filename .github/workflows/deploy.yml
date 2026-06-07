@@ -1,4 +1,4 @@
-name: Deploy to Amazon Linux EC2
+name: Fixed Deploy to Amazon Linux EC2
 
 on:
   push:
@@ -16,17 +16,19 @@ jobs:
 
       - name: Deploy and Transfer
         env:
+          # Keep only your sensitive PEM key as a secret
           SSH_KEY: ${{ secrets.EC2_KEY }}
-          SSH_USER: ${{ secrets.EC2_USER }}
-          SSH_HOST: ${{ secrets.EC2_HOST }}
+          # Hardcode your non-sensitive connection details to bypass the empty variable bug
+          SSH_USER: "ec2-user"
+          SSH_HOST: " 13.206.247.13" 
         run: |
           # 1. Recreate the private key file locally on the runner
           echo "$SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
           
-          # 2. Hard stop if your secrets are failing to load from GitHub Settings
-          if [ -z "$SSH_USER" ] || [ -z "$SSH_HOST" ]; then
-            echo "CRITICAL ERROR: GitHub Repository Secrets are empty or hidden!"
+          # 2. Check if the key secret itself is blank
+          if [ -z "$SSH_KEY" ]; then
+            echo "CRITICAL ERROR: GitHub is still blocking access to your EC2_KEY secret!"
             exit 1
           fi
           
