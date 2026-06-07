@@ -1,6 +1,7 @@
 name: Deploy to EC2
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -13,33 +14,30 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Debug Values
+        run: |
+          echo "User exists"
+          echo "${{ secrets.EC2_USER }}" | wc -c
+          echo "Host exists"
+          echo "${{ secrets.EC2_HOST }}" | wc -c
+
       - name: Setup SSH Key
         run: |
-          cat << 'EOF' > private_key.pem
-          ${{ secrets.EC2_KEY }}
-          EOF
+          echo "${{ secrets.EC2_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
-      - name: Verify Key File
+      - name: Show Target
         run: |
-          ls -l private_key.pem
-          head -1 private_key.pem
-          tail -1 private_key.pem
+          echo "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
 
-      - name: Debug Secrets
+      - name: Test SSH
         run: |
-          echo "EC2_USER=${{ secrets.EC2_USER }}"
-          echo "EC2_HOST=${{ secrets.EC2_HOST }}"
-
-      - name: Test SSH Connectivity
-        run: |
-          ssh -vvv \
-          -o StrictHostKeyChecking=no \
+          ssh -o StrictHostKeyChecking=no \
           -i private_key.pem \
           ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
-          "echo Connected Successfully"
+          "hostname"
 
-      - name: Deploy Application
+      - name: Deploy
         run: |
           scp -o StrictHostKeyChecking=no \
           -i private_key.pem \
@@ -49,4 +47,4 @@ jobs:
           ssh -o StrictHostKeyChecking=no \
           -i private_key.pem \
           ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
-          "sudo mv /tmp/index.html /var/www/html/index.html && sudo systemctl restart httpd"
+          "sudo mv /tmp/index.html /var/www/html/index.html"
