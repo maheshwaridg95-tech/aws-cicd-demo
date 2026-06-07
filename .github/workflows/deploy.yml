@@ -15,8 +15,16 @@ jobs:
 
       - name: Setup SSH Key
         run: |
-          echo "${{ secrets.EC2_KEY }}" > private_key.pem
+          cat << 'EOF' > private_key.pem
+          ${{ secrets.EC2_KEY }}
+          EOF
           chmod 600 private_key.pem
+
+      - name: Verify Key File
+        run: |
+          ls -l private_key.pem
+          head -1 private_key.pem
+          tail -1 private_key.pem
 
       - name: Debug Secrets
         run: |
@@ -25,7 +33,8 @@ jobs:
 
       - name: Test SSH Connectivity
         run: |
-          ssh -o StrictHostKeyChecking=no \
+          ssh -vvv \
+          -o StrictHostKeyChecking=no \
           -i private_key.pem \
           ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
           "echo Connected Successfully"
